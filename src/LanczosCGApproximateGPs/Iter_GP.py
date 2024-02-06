@@ -41,6 +41,9 @@ class Iter_GP():
     Methods
     -------
     kernel()
+    iter_forward()
+    approx_posterior_mean()
+    approx_posterior_covariance()
 
     """
     def __init__(self, design_matrix, response_vector, noise_level, actions, kernel):
@@ -72,6 +75,35 @@ class Iter_GP():
         for iter in range(iter_num):
             self.__iter_forward_one()
 
+    def approx_posterior_mean(self, input_array):
+        """Returns an approximate version of the posterior mean at the inputs."""
+        input_size              = np.shape(input_array)[0]
+        approximate_mean_vector = np.zeros(input_size)
+
+        for j in range(input_size):
+
+            kernel_vector = np.zeros(self.sample_size)
+            for i in range(self.sample_size):
+                kernel_vector[i] = self.kernel(self.design_matrix[i, :], input_array[j, :])
+
+            approximate_mean_vector[j] = np.dot(kernel_vector, self.approx_representer_weights) 
+
+        return approximate_mean_vector
+
+    def approx_posterior_covariance(self, design_point_1, design_point_2):
+        """Returns an approximate version of the posterior covariance at the inputs."""
+        kernel_vector_at_1 = np.zeros(self.sample_size)
+        for i in range(self.sample_size):
+            kernel_vector_at_1[i] = self.kernel(self.design_matrix[i, :], design_point_1)
+
+        kernel_vector_at_2 = np.zeros(self.sample_size)
+        for i in range(self.sample_size):
+            kernel_vector_at_2[i] = self.kernel(self.design_matrix[i, :], design_point_2)
+
+        evaluated_kernel     = self.kernel(design_point_1, design_point_2)
+        covariance_reduction = np.dot(kernel_vector_at_1, self.approx_augmented_inverse @ kernel_vector_at_2)
+
+        return evaluated_kernel - covariance_reduction
 
     def __iter_forward_one(self):
         """Performs one iteration of the Iter_GP algorithm."""
@@ -84,16 +116,12 @@ class Iter_GP():
             for j in range(0, self.sample_size):
                 rank_one_update[i, j] = conjugate_action[i] * conjugate_action[j]
 
-        vector_update = np.dot(conjugate_action, self.response_vector) * self.response_vector
+        vector_update = np.dot(conjugate_action, self.response_vector) * conjugate_action
 
         self.approx_augmented_inverse   = self.approx_augmented_inverse   + rank_one_update / weight
         self.approx_representer_weights = self.approx_representer_weights + vector_update   / weight 
 
         self.iter = self.iter + 1
-
-    # def mean()
-    #     """
-    #     """
 
     # def covariance()
     #     """
