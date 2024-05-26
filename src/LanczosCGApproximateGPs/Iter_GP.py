@@ -46,7 +46,8 @@ class Iter_GP():
     approx_posterior_covariance()
 
     """
-    def __init__(self, design_matrix, response_vector, noise_level, actions, kernel):
+    def __init__(self, design_matrix, response_vector, noise_level, actions,
+                 kernel):
         # User input
         self.design_matrix   = design_matrix
         self.response_vector = response_vector
@@ -58,17 +59,15 @@ class Iter_GP():
         self.sample_size   = np.shape(design_matrix)[0]
         self.sample_dim    = np.shape(design_matrix)[1]
 
-        self.kernel_matrix = np.zeros((self.sample_size, self.sample_size)) 
-        for i in range(0, self.sample_size):
-            for j in range(0, self.sample_size):
-                self.kernel_matrix[i, j] = self.kernel(self.design_matrix[i, :], self.design_matrix[j, :])
-
-        self.augmented_kernel_matrix = self.kernel_matrix + noise_level**2 * np.eye(self.sample_size)
+        self.kernel_matrix = kernel(design_matrix)
+        self.augmented_kernel_matrix = self.kernel_matrix + noise_level**2 * \
+                                       np.eye(self.sample_size)
 
         # Initialize quantities of the iteration
         self.iter                       = 0
         self.approx_representer_weights = np.zeros(self.sample_size)
-        self.approx_augmented_inverse   = np.zeros((self.sample_size, self.sample_size))
+        self.approx_augmented_inverse   = np.zeros((self.sample_size,
+                                                    self.sample_size))
 
     def iter_forward(self, iter_num):
         """Performs iter_num iterations of the Iter_GP algorithm."""
@@ -76,32 +75,33 @@ class Iter_GP():
             self.__iter_forward_one()
 
     def approx_posterior_mean(self, input_array):
-        """Returns an approximate version of the posterior mean at the inputs."""
+        """Returns an approximate version of the posterior mean at the inputs.
+        """
         input_size              = np.shape(input_array)[0]
         approximate_mean_vector = np.zeros(input_size)
 
         for j in range(input_size):
+            kernel_vector = self.kernel(self.design_matrix,
+                                        np.array([input_array[j, :]]))
 
-            kernel_vector = np.zeros(self.sample_size)
-            for i in range(self.sample_size):
-                kernel_vector[i] = self.kernel(self.design_matrix[i, :], input_array[j, :])
-
-            approximate_mean_vector[j] = np.dot(kernel_vector, self.approx_representer_weights) 
+            approximate_mean_vector[j] = kernel_vector.transpose() @ \
+                                         self.approx_representer_weights
 
         return approximate_mean_vector
 
     def approx_posterior_covariance(self, design_point_1, design_point_2):
-        """Returns an approximate version of the posterior covariance at the inputs."""
-        kernel_vector_at_1 = np.zeros(self.sample_size)
-        for i in range(self.sample_size):
-            kernel_vector_at_1[i] = self.kernel(self.design_matrix[i, :], design_point_1)
+        """Returns an approximate version of the posterior covariance at the
+           inputs.
+        """
+        kernel_vector_1 = self.kernel(self.design_matrix,
+                                      np.array([design_point_1]))
+        kernel_vector_2 = self.kernel(self.design_matrix,
+                                      np.array([design_point_2]))
 
-        kernel_vector_at_2 = np.zeros(self.sample_size)
-        for i in range(self.sample_size):
-            kernel_vector_at_2[i] = self.kernel(self.design_matrix[i, :], design_point_2)
-
-        evaluated_kernel     = self.kernel(design_point_1, design_point_2)
-        covariance_reduction = np.dot(kernel_vector_at_1, self.approx_augmented_inverse @ kernel_vector_at_2)
+        evaluated_kernel     = self.kernel(np.array([design_point_1]),
+                                           np.array([design_point_2]))
+        covariance_reduction = kernel_vector_1.transpose()   @ \
+                               self.approx_augmented_inverse @ kernel_vector_2
 
         return evaluated_kernel - covariance_reduction
 
