@@ -31,11 +31,14 @@ class Lanczos():
         self.beta  = np.zeros(self.number_of_eigenpairs + 1)
 
         # ONB matrix and tridiagonal matrix
-        self.onb_matrix         = np.zeros((np.shape(self.matrix)[0],  self.number_of_eigenpairs + 1))
-        self.tridiagonal_matrix = np.zeros((self.number_of_eigenpairs, self.number_of_eigenpairs))
+        self.onb_matrix         = np.zeros((np.shape(self.matrix)[0],
+                                            self.number_of_eigenpairs + 1))
+        self.tridiagonal_matrix = np.zeros((self.number_of_eigenpairs,
+                                            self.number_of_eigenpairs))
 
         # Eigenquantities
-        self.eigenvectors = np.zeros((np.shape(self.matrix)[0],  self.number_of_eigenpairs))
+        self.eigenvectors = np.zeros((np.shape(self.matrix)[0],
+                                      self.number_of_eigenpairs))
         self.eigenvalues  = np.zeros(np.shape(self.matrix)[0])
 
         # Check quantities
@@ -53,23 +56,25 @@ class Lanczos():
         # main loop
         for index in range(self.number_of_eigenpairs):
             # Initialize new basis vector and first orthogonolization
-            new_basis_vector = self.matrix @ basis_vector - self.beta[index] * old_basis_vector
+            new_basis_vector = self.matrix @ basis_vector - \
+                               self.beta[index] * old_basis_vector
 
             # Second orthogonolization step
             self.alpha[index] = np.dot(new_basis_vector, basis_vector)
-            new_basis_vector = new_basis_vector - self.alpha[index] * basis_vector
+            new_basis_vector  = new_basis_vector - \
+                                self.alpha[index] * basis_vector
 
             # Normalization step
             self.beta[index + 1] = np.sqrt(np.sum(new_basis_vector**2))
-            new_basis_vector    = new_basis_vector / self.beta[index + 1]
+            new_basis_vector     = new_basis_vector / self.beta[index + 1]
 
             # Collect and update quantities
             self.onb_matrix[:, index + 1] = new_basis_vector
-            old_basis_vector             = basis_vector
-            basis_vector                 = new_basis_vector
+            old_basis_vector              = basis_vector
+            basis_vector                  = new_basis_vector
 
         # Eliminate one superfluous column of the onb_matrix
-        self.onb_matrix         = self.onb_matrix[:, 0:self.number_of_eigenpairs]
+        self.onb_matrix = self.onb_matrix[:, 0:self.number_of_eigenpairs]
 
         # Fill the tridiagonal matrix
         self.tridiagonal_matrix = np.diag(self.beta[1:(self.number_of_eigenpairs)], -1) + \
@@ -83,14 +88,8 @@ class Lanczos():
     def get_eigenquantities(self):
         """Compute the Lanczos approximate eigenvectors"""
         # Lower dimensional SVD of the tridiagonal matrix
-        U, S, Vh          = np.linalg.svd(self.tridiagonal_matrix, hermitian = True)
+        U, S, Vh          = np.linalg.svd(self.tridiagonal_matrix,
+                                          hermitian = True)
 
         self.eigenvectors = self.onb_matrix @ U
         self.eigenvalues  = S
-
-
-
-
-
-
-
